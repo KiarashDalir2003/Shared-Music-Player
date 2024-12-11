@@ -1,28 +1,31 @@
 import threading
 import socket
-from threading import *
-from pymongo import *
+from pymongo import MongoClient
 import bcrypt
+
 clients = []
 MongoClk = MongoClient('localhost', 27017)
 db = MongoClk['musicDB']
 playlistCollection = db['playlist']
 userCollection = db['users']
 
-# def broadcast(playlist_data):
-#     for c in clients:
-#         try:
-#             c.send(playlist_data.encode('utf-8'))
-#         except:
-#             clients.remove(c)
+def broadcastToAllClients(message):
+    for client in clients:
+        try:
+            client.send(message.encode('utf-8'))
+        except:
+            clients.remove(client)
 
 def handleClient(conn, addr):
     while True:
         request = conn.recv(1024).decode('utf-8')
         if not request:
             break
-        action, username, password = request.split(',')
+        p = request.split(',')
+        action = p[0]
         if action == 'signup':
+            username = p[1]
+            password = p[2]
             if userCollection.find_one({'username': username}):
                 response = 'Username already exists'
             else:
@@ -31,16 +34,45 @@ def handleClient(conn, addr):
                 response = 'User created successfully'
             conn.send(response.encode('utf-8'))
         elif action == 'login':
+            username = p[1]
+            password = p[2]
             user = userCollection.find_one({'username': username})
             if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
                 response = 'Login successfully'
+                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1})
+                for music in playlist_dict:
+                    file_path = music['file_path']
+                    response += f',{file_path}'
             else:
                 response = 'Invalid username or password'
             conn.send(response.encode('utf-8'))
-            conn.close()
-
-def getPlaylist():
-    pass
+        elif action == 'addsong':
+            file_path = p[1]
+            if playlistCollection.find_one({'file_path': file_path}):
+                response = 'File already exists'
+            else:
+                response = 'Song added successfully'
+                playlistCollection.insert_one({'file_path': file_path})
+                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1})
+                for music in playlist_dict:
+                    file_path = music['file_path']
+                    response += f',{file_path}'
+                broadcastToAllClients(response)
+            conn.send(response.encode('utf-8'))
+        elif action == 'deletesong':
+            file_path = p[1]
+            if playlistCollection.find_one({'file_path': file_path}):
+                playlistCollection.delete_one({'file_path': file_path})
+                response = 'Song deleted successfully'
+                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1})
+                for music in playlist_dict:
+                    file_path = music['file_path']
+                    response += f',{file_path}'
+                broadcastToAllClients(response)
+            else:
+                response = 'File not found'
+            conn.send(response.encode('utf-8'))
+    conn.close()
 
 def server():
     SRV_Sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
