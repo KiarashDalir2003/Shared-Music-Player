@@ -4,12 +4,17 @@ import pygame
 from tkinter import *
 import tkinter as tk
 import threading
+from mutagen.mp3 import MP3
+import time
+import tkinter.ttk as ttk
 
 # Initialize pygame mixer
 pygame.mixer.init()
 
-# Define global socket variable
+# Define global variables
 CLK_Sock = None
+paused = False
+stopped = False
 
 # Function to connect to the server socket
 def connect_socket():
@@ -88,6 +93,13 @@ def deleteSong():
         response = sendRequest(data)
         receive_updates(response)
 
+def voteSong():
+    selected_song = songListBox.get(ACTIVE)
+    if selected_song:
+        data = f"votesong,{selected_song}"
+        response = sendRequest(data)
+        receive_updates(response)
+
 # Function to receive updates from the server and update playlist
 def receive_updates(playlist):
     items = playlist.split(",")[1:]  # Skip the action part
@@ -112,22 +124,67 @@ def on_closing():
 
 # Function to play the selected song
 def playSong():
+    global stopped, paused
+    stopped = False
+    paused = False
+
     selected_song = songListBox.get(ACTIVE)
     if selected_song:
         pygame.mixer.music.load(selected_song)
         pygame.mixer.music.play()
+        my_slider.config(value=0)  # Reset the slider to initial position
+        play_time()
 
 # Function to pause/resume the currently playing song
 def pauseResumeSong():
-    if pygame.mixer.music.get_busy():
-        if pygame.mixer.music.get_pos() > 0:
-            pygame.mixer.music.pause()
-        else:
-            pygame.mixer.music.unpause()
+    global paused
+    if paused:
+        pygame.mixer.music.unpause()
+        paused = False
+    else:
+        pygame.mixer.music.pause()
+        paused = True
 
-# Function to stop the currently playing song
+
 def stopSong():
+    global stopped
+    stopped = True
     pygame.mixer.music.stop()
+    paused = False
+    my_slider.set(0)  # Reset slider to initial position
+
+
+# Function to scale (jump to) a specific time in the currently playing song
+def scaleMusic(time_position):
+    if pygame.mixer.music.get_busy() or paused:  # Also update the position when paused
+        pygame.mixer.music.set_pos(time_position)
+
+# Function to update the play time and slider
+def play_time():
+    if stopped:
+        return
+    current_time = pygame.mixer.music.get_pos() / 1000
+    song = songListBox.get(ACTIVE)
+    song_mut = MP3(song)
+    song_length = song_mut.info.length
+    current_time += 1
+    if int(my_slider.get()) == int(song_length):
+        pass
+    elif paused:
+        pass
+    elif int(my_slider.get()) == int(current_time):
+        slider_position = int(song_length)
+        my_slider.config(to=slider_position, value=int(current_time))
+    else:
+        slider_position = int(song_length)
+        my_slider.config(to=slider_position, value=int(my_slider.get()))
+        next_time = int(my_slider.get()) + 1
+        my_slider.config(value=next_time)
+    my_slider.after(1000, play_time)
+
+# Function to create the slider function
+def slide(x):
+    scaleMusic(int(my_slider.get()))  # Ensure the new position is set even when paused
 
 # Function to create the login frame
 def createLoginFrame(root, font):
@@ -173,34 +230,53 @@ def createSignupFrame(root, font):
 
 # Function to create the music player frame
 def createMusicPlayerFrame(root, font):
-    global songListBox
+    global songListBox, my_slider
     frame = tk.Frame(root, bg='black')
     backToLoginButtonFromMusicPlayer = tk.Button(frame, text='Back to login', bg='orange', fg='black', font=font, command=ShowLoginFrame)
     backToLoginButtonFromMusicPlayer.pack(pady=5)
     songListLabel = tk.Label(frame, text='Song List:', bg='black', fg='white', font=font)
     songListLabel.pack(pady=5)
-    songListBox = tk.Listbox(frame, font=font)
+
+    songListBox = tk.Listbox(frame, font=font, width=50, height=20)
     songListBox.pack(pady=5)
+
     buttonFrame1 = tk.Frame(frame, bg='black')
     buttonFrame1.pack(pady=5)
     addSongButton = tk.Button(buttonFrame1, text='Add Song', bg='orange', fg='black', font=font, command=addSong)
     addSongButton.pack(side=LEFT, padx=5)
-    deleteSongButton = tk.Button(buttonFrame1, text='Delete Song', bg='orange', fg='black', font=font, command=deleteSong)
+    deleteSongButton = tk.Button(buttonFrame1, text='Delete Song', bg='orange', fg='black', font=font,
+                                 command=deleteSong)
     deleteSongButton.pack(side=LEFT, padx=5)
+
     buttonFrame2 = tk.Frame(frame, bg='black')
     buttonFrame2.pack(pady=5)
     playButton = tk.Button(buttonFrame2, text='Play', bg='orange', fg='black', font=font, command=playSong)
     playButton.pack(side=LEFT, padx=5)
-    pauseButton = tk.Button(buttonFrame2, text='Pause/Resume', bg='orange', fg='black', font=font, command=pauseResumeSong)
+    pauseButton = tk.Button(buttonFrame2, text='Pause/Resume', bg='orange', fg='black', font=font,
+                            command=pauseResumeSong)
     pauseButton.pack(side=LEFT, padx=5)
     stopButton = tk.Button(buttonFrame2, text='Stop', bg='orange', fg='black', font=font, command=stopSong)
     stopButton.pack(side=LEFT, padx=5)
+
+    # Adding Scale Music slider
+    scaleFrame = tk.Frame(frame, bg='black')
+    scaleFrame.pack(pady=5)
+    my_slider = ttk.Scale(scaleFrame, from_=0, to=100, orient=HORIZONTAL, value=0, command=slide, length=400)
+    my_slider.pack(side=LEFT, padx=5)
+
+
+    voteFrame = tk.Frame(frame, bg='black')
+    voteFrame.pack(pady=5)
+    voteButton = tk.Button(voteFrame, text='Vote',  bg='orange', fg='black', font=font, command=voteSong)
+    voteButton.pack(side=LEFT, padx=5)
+
     return frame
+
 
 # Create main application window
 root = tk.Tk()
 root.title('Music Player')
-root.geometry('500x500')
+root.geometry('700x600')
 root.resizable(False, False)
 root.config(bg='black')
 root.protocol("WM_DELETE_WINDOW", on_closing)

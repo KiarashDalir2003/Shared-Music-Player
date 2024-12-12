@@ -52,8 +52,8 @@ def handleClient(conn, addr):
                 response = 'File already exists'
             else:
                 response = 'Song added successfully'
-                playlistCollection.insert_one({'file_path': file_path})
-                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1})
+                playlistCollection.insert_one({'file_path': file_path, 'votes': 0})
+                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1}).sort('votes', -1)
                 for music in playlist_dict:
                     file_path = music['file_path']
                     response += f',{file_path}'
@@ -64,13 +64,26 @@ def handleClient(conn, addr):
             if playlistCollection.find_one({'file_path': file_path}):
                 playlistCollection.delete_one({'file_path': file_path})
                 response = 'Song deleted successfully'
-                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1})
+                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1}).sort('votes', -1)
                 for music in playlist_dict:
                     file_path = music['file_path']
                     response += f',{file_path}'
                 broadcastToAllClients(response)
             else:
                 response = 'File not found'
+            conn.send(response.encode('utf-8'))
+        elif action == 'votesong':
+            file_path = p[1]
+            if playlistCollection.find_one({'file_path': file_path}):
+                playlistCollection.update_one({'file_path': file_path}, {'$inc': {'votes': 1}})
+            playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1}).sort('votes', -1)
+            response ='Song voted successfully'
+
+            for music in playlist_dict:
+                file_path = music['file_path']
+                response += f',{file_path}'
+
+            broadcastToAllClients(response)
             conn.send(response.encode('utf-8'))
     conn.close()
 
