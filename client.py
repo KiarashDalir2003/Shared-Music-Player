@@ -1,4 +1,5 @@
 import socket
+from tabnanny import check
 from tkinter import filedialog
 import pygame
 from tkinter import *
@@ -15,6 +16,7 @@ pygame.mixer.init()
 CLK_Sock = None
 paused = False
 stopped = False
+Username = ''
 
 # Function to connect to the server socket
 def connect_socket():
@@ -33,10 +35,14 @@ def close_socket():
 # Function to handle login
 def login(loginUsername, loginPassword, loginMessageLabel):
     connect_socket()
+    global Username
+    Username = loginUsername.get()
+
     data = f"login,{loginUsername.get()},{loginPassword.get()}"
     CLK_Sock.send(data.encode('utf-8'))
     response = CLK_Sock.recv(1024).decode('utf-8')
     loginMessageLabel.config(text=response.split(',')[0], fg="green" if "successfully" in response else "red")
+
     if "successfully" in response:
         showMusicPlayerFrame()
         receive_updates(response)
@@ -75,6 +81,7 @@ def ShowLoginFrame():
 # Function to show music player frame
 def showMusicPlayerFrame():
     loginFrame.pack_forget()
+    UsernameLabel.config(text=Username)
     musicPlayerFrame.pack()
 
 # Function to add song to the playlist
@@ -96,8 +103,23 @@ def deleteSong():
 def voteSong():
     selected_song = songListBox.get(ACTIVE)
     if selected_song:
-        data = f"votesong,{selected_song}"
+        data = f"votesong,{selected_song},{Username}"
         response = sendRequest(data)
+
+        receive_updates(response)
+
+def checkVoteStatus(event):
+    selected_song = songListBox.get(ACTIVE)
+    if selected_song:
+        data = f"votestatus,{selected_song},{Username}"
+        response = sendRequest(data)
+
+        if 'You have voted' in response:
+            voteButton.config(state=DISABLED)
+        elif 'You have not voted' in response:
+            voteButton.config(state=NORMAL)
+
+
         receive_updates(response)
 
 # Function to receive updates from the server and update playlist
@@ -230,16 +252,23 @@ def createSignupFrame(root, font):
 
 # Function to create the music player frame
 def createMusicPlayerFrame(root, font):
-    global songListBox, my_slider
+    global songListBox, my_slider, voteButton, UsernameLabel
+
     frame = tk.Frame(root, bg='black')
-    backToLoginButtonFromMusicPlayer = tk.Button(frame, text='Back to login', bg='orange', fg='black', font=font, command=ShowLoginFrame)
-    backToLoginButtonFromMusicPlayer.pack(pady=5)
+    # backToLoginButtonFromMusicPlayer = tk.Button(frame, text='Back to login', bg='orange', fg='black', font=font, command=ShowLoginFrame)
+    # backToLoginButtonFromMusicPlayer.pack(pady=5)
+
+    UsernameLabel = tk.Label(frame, text='', bg='black', fg='white', font=font)
+    UsernameLabel.config(text=Username)
+    UsernameLabel.place(x=0, y=0)
+
     songListLabel = tk.Label(frame, text='Song List:', bg='black', fg='white', font=font)
     songListLabel.pack(pady=5)
 
     songListBox = tk.Listbox(frame, font=font, width=50, height=20)
     songListBox.pack(pady=5)
-
+    songListBox.bind('<Button-1>', checkVoteStatus)
+    songListBox.bind('<Motion>', lambda event: event.widget.itemconfig(tk.ACTIVE, {'bg': 'orange'}))
     buttonFrame1 = tk.Frame(frame, bg='black')
     buttonFrame1.pack(pady=5)
     addSongButton = tk.Button(buttonFrame1, text='Add Song', bg='orange', fg='black', font=font, command=addSong)
@@ -268,6 +297,8 @@ def createMusicPlayerFrame(root, font):
     voteFrame = tk.Frame(frame, bg='black')
     voteFrame.pack(pady=5)
     voteButton = tk.Button(voteFrame, text='Vote',  bg='orange', fg='black', font=font, command=voteSong)
+
+    voteButton.config(state=DISABLED)
     voteButton.pack(side=LEFT, padx=5)
 
     return frame

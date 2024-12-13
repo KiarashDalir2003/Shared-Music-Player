@@ -6,6 +6,8 @@ import bcrypt
 clients = []
 MongoClk = MongoClient('localhost', 27017)
 db = MongoClk['musicDB']
+
+votedSongCollection = db['voteList']
 playlistCollection = db['playlist']
 userCollection = db['users']
 
@@ -63,6 +65,7 @@ def handleClient(conn, addr):
             file_path = p[1]
             if playlistCollection.find_one({'file_path': file_path}):
                 playlistCollection.delete_one({'file_path': file_path})
+                votedSongCollection.delete_many({'file_path': file_path})
                 response = 'Song deleted successfully'
                 playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1}).sort('votes', -1)
                 for music in playlist_dict:
@@ -74,10 +77,36 @@ def handleClient(conn, addr):
             conn.send(response.encode('utf-8'))
         elif action == 'votesong':
             file_path = p[1]
-            if playlistCollection.find_one({'file_path': file_path}):
+            username = p[2]
+
+            if not votedSongCollection.find_one({'file_path': file_path,'username': username}):
                 playlistCollection.update_one({'file_path': file_path}, {'$inc': {'votes': 1}})
+                votedSongCollection.insert_one({'file_path': file_path, 'username': username})
+                response ='Song voted successfully'
+            else:
+                response = 'Song already voted'
+                conn.send(response.encode('utf-8'))
+
             playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1}).sort('votes', -1)
-            response ='Song voted successfully'
+
+            for music in playlist_dict:
+                file_path = music['file_path']
+                response += f',{file_path}'
+
+            broadcastToAllClients(response)
+            conn.send(response.encode('utf-8'))
+        elif action == 'votestatus':
+            file_path = p[1]
+            username = p[2]
+
+            if not votedSongCollection.find_one({'file_path': file_path, 'username': username}):
+                response = 'You have not voted'
+                conn.send(response.encode('utf-8'))
+            else:
+                response = 'You have voted'
+                conn.send(response.encode('utf-8'))
+
+            playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1}).sort('votes', -1)
 
             for music in playlist_dict:
                 file_path = music['file_path']
