@@ -8,7 +8,8 @@ import threading
 from mutagen.mp3 import MP3
 import time
 import tkinter.ttk as ttk
-
+from tkinter.ttk import *
+from PIL import Image,ImageTk
 # Initialize pygame mixer
 pygame.mixer.init()
 
@@ -250,13 +251,11 @@ def createSignupFrame(root, font):
     backToLoginButton.pack(pady=5)
     return frame
 
-# Function to create the music player frame
+
 def createMusicPlayerFrame(root, font):
     global songListBox, my_slider, voteButton, UsernameLabel
 
     frame = tk.Frame(root, bg='black')
-    # backToLoginButtonFromMusicPlayer = tk.Button(frame, text='Back to login', bg='orange', fg='black', font=font, command=ShowLoginFrame)
-    # backToLoginButtonFromMusicPlayer.pack(pady=5)
 
     UsernameLabel = tk.Label(frame, text='', bg='black', fg='white', font=font)
     UsernameLabel.config(text=Username)
@@ -273,18 +272,33 @@ def createMusicPlayerFrame(root, font):
     buttonFrame1.pack(pady=5)
     addSongButton = tk.Button(buttonFrame1, text='Add Song', bg='orange', fg='black', font=font, command=addSong)
     addSongButton.pack(side=LEFT, padx=5)
-    deleteSongButton = tk.Button(buttonFrame1, text='Delete Song', bg='orange', fg='black', font=font,
-                                 command=deleteSong)
+    deleteSongButton = tk.Button(buttonFrame1, text='Delete Song', bg='orange', fg='black', font=font, command=deleteSong)
     deleteSongButton.pack(side=LEFT, padx=5)
 
     buttonFrame2 = tk.Frame(frame, bg='black')
     buttonFrame2.pack(pady=5)
-    playButton = tk.Button(buttonFrame2, text='Play', bg='orange', fg='black', font=font, command=playSong)
+
+    # Load images
+    play_img = Image.open("play.png").resize((50, 50), Image.Resampling.LANCZOS)
+    play_photo = ImageTk.PhotoImage(play_img)
+
+    pause_img = Image.open("pause.png").resize((50, 50), Image.Resampling.LANCZOS)
+    pause_photo = ImageTk.PhotoImage(pause_img)
+
+    stop_img = Image.open("stop.png").resize((50, 50), Image.Resampling.LANCZOS)
+    stop_photo = ImageTk.PhotoImage(stop_img)
+
+    # Create buttons with images
+    playButton = tk.Button(buttonFrame2, image=play_photo, command=playSong, bd=0, bg='orange')
+    playButton.image = play_photo  # Keep a reference to avoid garbage collection
     playButton.pack(side=LEFT, padx=5)
-    pauseButton = tk.Button(buttonFrame2, text='Pause/Resume', bg='orange', fg='black', font=font,
-                            command=pauseResumeSong)
+
+    pauseButton = tk.Button(buttonFrame2, image=pause_photo, command=pauseResumeSong, bd=0, bg='orange')
+    pauseButton.image = pause_photo  # Keep a reference to avoid garbage collection
     pauseButton.pack(side=LEFT, padx=5)
-    stopButton = tk.Button(buttonFrame2, text='Stop', bg='orange', fg='black', font=font, command=stopSong)
+
+    stopButton = tk.Button(buttonFrame2, image=stop_photo, command=stopSong, bd=0, bg='orange')
+    stopButton.image = stop_photo  # Keep a reference to avoid garbage collection
     stopButton.pack(side=LEFT, padx=5)
 
     # Adding Scale Music slider
@@ -293,10 +307,9 @@ def createMusicPlayerFrame(root, font):
     my_slider = ttk.Scale(scaleFrame, from_=0, to=100, orient=HORIZONTAL, value=0, command=slide, length=400)
     my_slider.pack(side=LEFT, padx=5)
 
-
     voteFrame = tk.Frame(frame, bg='black')
     voteFrame.pack(pady=5)
-    voteButton = tk.Button(voteFrame, text='Vote',  bg='orange', fg='black', font=font, command=voteSong)
+    voteButton = tk.Button(voteFrame, text='Vote', bg='orange', fg='black', font=font, command=voteSong)
 
     voteButton.config(state=DISABLED)
     voteButton.pack(side=LEFT, padx=5)
@@ -304,8 +317,13 @@ def createMusicPlayerFrame(root, font):
     return frame
 
 
+
 # Create main application window
 root = tk.Tk()
+icon_image = Image.open("title.png")
+icon_photo = ImageTk.PhotoImage(icon_image)
+root.iconphoto(False, icon_photo)
+
 root.title('Music Player')
 root.geometry('700x600')
 root.resizable(False, False)
