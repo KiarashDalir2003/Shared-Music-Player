@@ -18,6 +18,7 @@ CLK_Sock = None
 paused = False
 stopped = False
 Username = ''
+currently_playing_song = None
 
 # Function to connect to the server socket
 def connect_socket():
@@ -163,9 +164,11 @@ def pauseResumeSong():
     global paused
     if paused:
         pygame.mixer.music.unpause()
+        pauseButton.config(image=pause_photo)
         paused = False
     else:
         pygame.mixer.music.pause()
+        pauseButton.config(image=resume_photo)
         paused = True
 
 
@@ -253,7 +256,7 @@ def createSignupFrame(root, font):
 
 
 def createMusicPlayerFrame(root, font):
-    global songListBox, my_slider, voteButton, UsernameLabel
+    global songListBox, my_slider, voteButton, UsernameLabel, pauseButton , pause_photo, resume_photo
 
     frame = tk.Frame(root, bg='black')
 
@@ -284,6 +287,9 @@ def createMusicPlayerFrame(root, font):
 
     pause_img = Image.open("pause.png").resize((50, 50), Image.Resampling.LANCZOS)
     pause_photo = ImageTk.PhotoImage(pause_img)
+
+    resume_img = Image.open("resume.png").resize((50, 50), Image.Resampling.LANCZOS)
+    resume_photo = ImageTk.PhotoImage(resume_img)
 
     stop_img = Image.open("stop.png").resize((50, 50), Image.Resampling.LANCZOS)
     stop_photo = ImageTk.PhotoImage(stop_img)
