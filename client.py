@@ -143,6 +143,10 @@ def listenForUpdates():
         except OSError:
             break
 
+def setVolume(vol):
+    volume_level = float(vol) / 100
+    pygame.mixer.music.set_volume(volume_level)
+
 # Function to close socket and application on window close
 def on_closing():
     close_socket()
@@ -255,10 +259,8 @@ def createSignupFrame(root, font):
     backToLoginButton = tk.Button(frame, text='Back to login', bg='orange', fg='black', font=font, command=ShowLoginFrame)
     backToLoginButton.pack(pady=5)
     return frame
-
-
 def createMusicPlayerFrame(root, font):
-    global songListBox, my_slider, voteButton, UsernameLabel, pauseButton , pause_photo, resume_photo
+    global songListBox, my_slider, voteButton, UsernameLabel, pauseButton, pause_photo, resume_photo
 
     frame = tk.Frame(root, bg='black')
 
@@ -273,6 +275,7 @@ def createMusicPlayerFrame(root, font):
     songListBox.pack(pady=5)
     songListBox.bind('<Double-1>', checkVoteStatus)
     songListBox.bind('<Motion>', lambda event: event.widget.itemconfig(tk.ACTIVE))
+
     buttonFrame1 = tk.Frame(frame, bg='black')
     buttonFrame1.pack(pady=5)
     addSongButton = tk.Button(buttonFrame1, text='Add Song', bg='orange', fg='black', font=font, command=addSong)
@@ -315,6 +318,12 @@ def createMusicPlayerFrame(root, font):
     my_slider = ttk.Scale(scaleFrame, from_=0, to=100, orient=HORIZONTAL, value=0, command=slide, length=400)
     my_slider.pack(side=LEFT, padx=5)
 
+
+    volume_slider = ttk.Scale(scaleFrame, from_=0, to=100, orient=HORIZONTAL, value=50, command=setVolume, length=60)
+    volume_slider.pack(side=LEFT, padx=5)
+    volume_label = tk.Label(scaleFrame, text='Volume', bg='black', fg='white', font=font)
+    volume_label.pack(side=LEFT, padx=5)
+
     voteFrame = tk.Frame(frame, bg='black')
     voteFrame.pack(pady=5)
     voteButton = tk.Button(voteFrame, text='Vote', bg='orange', fg='black', font=font, command=voteSong)
@@ -323,6 +332,7 @@ def createMusicPlayerFrame(root, font):
     voteButton.pack(side=LEFT, padx=5)
 
     return frame
+
 
 
 
