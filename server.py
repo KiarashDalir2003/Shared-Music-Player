@@ -16,7 +16,8 @@ def broadcastToAllClients(message):
         try:
             client.send(message.encode('utf-8'))
         except:
-            clients.remove(client)
+            pass
+            # clients.remove(client)
 
 def handleClient(conn, addr):
     while True:
