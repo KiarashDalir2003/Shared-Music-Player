@@ -41,7 +41,7 @@ def handleClient(conn, addr):
             user = userCollection.find_one({'username': username})
             if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
                 response = 'Login successfully'
-                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1})
+                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1}).sort('votes', -1)
                 for music in playlist_dict:
                     file_path = music['file_path']
                     response += f',{file_path}'
@@ -50,16 +50,18 @@ def handleClient(conn, addr):
             conn.send(response.encode('utf-8'))
         elif action == 'addsong':
             file_path = p[1]
+
             if playlistCollection.find_one({'file_path': file_path}):
                 response = 'File already exists'
             else:
                 response = 'Song added successfully'
                 playlistCollection.insert_one({'file_path': file_path, 'votes': 0})
-                playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1}).sort('votes', -1)
-                for music in playlist_dict:
-                    file_path = music['file_path']
-                    response += f',{file_path}'
-                broadcastToAllClients(response)
+
+            playlist_dict = playlistCollection.find({}, {'_id': 0, 'file_path': 1}).sort('votes', -1)
+            for music in playlist_dict:
+                file_path = music['file_path']
+                response += f',{file_path}'
+            broadcastToAllClients(response)
             conn.send(response.encode('utf-8'))
         elif action == 'deletesong':
             file_path = p[1]

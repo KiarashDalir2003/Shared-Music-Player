@@ -112,6 +112,8 @@ def voteSong():
 
 def checkVoteStatus(event):
     selected_song = songListBox.get(ACTIVE)
+    playSong()
+
     if selected_song:
         data = f"votestatus,{selected_song},{Username}"
         response = sendRequest(data)
@@ -173,7 +175,7 @@ def pauseResumeSong():
 
 
 def stopSong():
-    global stopped
+    global stopped, paused
     stopped = True
     pygame.mixer.music.stop()
     paused = False
@@ -269,8 +271,8 @@ def createMusicPlayerFrame(root, font):
 
     songListBox = tk.Listbox(frame, font=font, width=50, height=20)
     songListBox.pack(pady=5)
-    songListBox.bind('<Button-1>', checkVoteStatus)
-    songListBox.bind('<Motion>', lambda event: event.widget.itemconfig(tk.ACTIVE, {'bg': 'orange'}))
+    songListBox.bind('<Double-1>', checkVoteStatus)
+    songListBox.bind('<Motion>', lambda event: event.widget.itemconfig(tk.ACTIVE))
     buttonFrame1 = tk.Frame(frame, bg='black')
     buttonFrame1.pack(pady=5)
     addSongButton = tk.Button(buttonFrame1, text='Add Song', bg='orange', fg='black', font=font, command=addSong)
